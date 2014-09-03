@@ -1,0 +1,20 @@
+How to run an experiment:
+
+1. Get the fresh build of the deconflictiontools package 
+
+ ./update_solver.sh
+
+2. Generate the problem instances for different values of the paremeters. The script prepare.sh is meant to be customized for each experiment set-up.
+
+ ./prepare.sh
+ 
+ The xml with problem instances will be generated to a specified subfolder ENV in instances. The input data file for parallel is in the file named instances/ENV/data.in, the output data is in  instances/ENV/data.out, the head (name of each column in data.out) is in  instances/ENV/head.
+
+3. Run the experiment using parallel. Example: use the following command
+
+ ./run.sh empty 4
+ 
+ to run the experiment with the problem instances in the folder instances/empty on 4 CPUs. The experiment results will be in the file instances/empty/data.out.head. 
+ 
+ 4. Open process.r in RStudio and analyze the data stored in instances/ENV/data.out.head.  
+
