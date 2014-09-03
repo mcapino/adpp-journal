@@ -25,5 +25,7 @@ $ ./run.sh warehouse-r25-docks 1
 -------------------
 
 The experiment results will stored be in the instances/INSTANCESET/data.out.head. 
-The results are processed using an R-script in process.r.  
+The results are processed using an R-script in process.r. 
+Edit the name of the instance set at the beginning of the script and run the script. 
+The PDF with plots will be in instances/plots. 
 

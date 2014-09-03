@@ -1,0 +1,6 @@
+.Rproj.user
+.Rhistory
+.RData
+log/
+instances/*/*.log
+instances/*/*.out*

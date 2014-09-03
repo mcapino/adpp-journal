@@ -1,343 +1,387 @@
+### Load the libs 
+
 library(plyr)
+library(ggplot2)
+library(RColorBrewer)
+library(gridExtra)
 
 ### Load the data
 
-env <- "urbanC-bounded-g4"
+env <- "empty-hall-r22" ### <--- EDIT THE INSTANCESET NAME HERE
+
 dir <- paste("instances/",env, sep="")
-results <- read.csv(file=paste(dir, "/data.out.head", sep=""), head=TRUE, sep=";")
-resultssorted <- results[order(results$instance, results$alg, results$runtime),]
+imgdir <- paste(dir, "/figs/", sep="")
+plotsdir <- paste(dir, "/../plots/", sep="")
+runs <- read.csv(file=paste(dir, "/data.out.head", sep=""), head=TRUE, sep=";")
+runs <- runs[order(runs$instance, runs$alg),]
+runs$time[runs$time==0] <- NA
+runs$agents.in.cluster <- runs$nagents/runs$clusters
+runs$agents.in.cluster.ceil <- ceiling(runs$nagents/runs$clusters)
+runs$replans.per.agent <- runs$replans / runs$nagents
+runs$expansions.per.replan <- runs$expansions/runs$replans 
+runs$time[runs$alg=="ORCA"] <- NA
 
-### Select a subset of data
+maxagents <- max(runs$nagents)
 
-selresults <- results
-selruns <- aggregate.results.to.runs(selresults)
-cat( paste("Selected instances:", nrow(selruns)/3) )
+runs$alg = factor(runs$alg,levels=c("PP", "RPP", "SDPP", "SDRPP", "ADPP",  "ADRPP", "ORCA", "BASEST"))
 
-### Plot graphs ###
-
-successrate.nagents(selruns)
-cost.vs.runtime(results=selresults, reftime=750, maxtime=4000, algs=c("PP", "IIHP", "ODCN"), step=100)
-successrate.vs.runtime(runs=selruns, maxtime=5000, algs=c("PP","IIHP", "ODCN"), step=50)
-successrate.vs.expansions(runs=selruns, maxexpansions=300000, algs=c("PP","IIHP", "ODCN"), step=1000)
-
-quality.comparison(selruns)
-
-suboptimality.boxplot(selruns)
-improvement.boxplot(selruns)
-
-first.and.bestsol(selruns)
-runtime.to.firstsol(selruns)
-expansions.to.firstsol(selruns)
-expansions.to.bestsol(selruns)
-
-## aggregate results to runs ##
-aggregate.results.to.runs <- function(results) {
-  runs <- ddply(results, .(instance, alg), summarise, 
-                   nagents = max(nagents),              
-                   radius = max(radius),
-                   gridstep = max(gridstep),
-                   succeeded = max(is.finite(cost)),
-                   solutions = length(unique(cost)),
-                   firstsoltime = ifelse(max(is.finite(cost)), min(runtime), NA),
-                   firstsolexp = ifelse(max(is.finite(cost)), min(expansions), NA),
-                   firstsolcost = max(cost),
-                   finished = max(runtime),
-                   
-                   bestsolcost = min(cost),
-                   bestsoltime = ifelse(max(is.finite(cost)), max(runtime), NA),
-                   bestsolexp = ifelse(max(is.finite(cost)), max(expansions), NA)              
-  )
-  
-  return(runs)
-}
-
-successrate.vs.runtime <- function(runs, maxtime, algs, step=500) {
-  ninstances <- length(unique(runs[,"instance"]))
-  
-  succ.rate <- data.frame()
-  
-  i <- 1
-  for (t in seq(0, maxtime, by=step)) {    
-    succ.rate[i, "time"] <- t    
-    
-    for (alg in algs) {
-      succ.rate[i, alg] <- length(runs[runs$alg==alg & is.finite(runs$firstsoltime) & runs$firstsoltime <= t, "instance"]) / ninstances    
-    }
-    
-    i <- i + 1
-  }
-    
-  plot(succ.rate[,"time"], 
-       succ.rate[,"PP"]*100, 
-       type="o", ylim=c(0, 100), 
-       ylab="success rate",
-       xlab="runtime [ms]")
-  
-  points(succ.rate[,"time"], 
-         succ.rate[,"IIHP"]*100, 
-         type="o", pch=22, col="red", lty=2)
-  
-  if (is.element("ODCN", names(succ.rate))) {
-    points(succ.rate[,"time"], 
-           succ.rate[,"ODCN"]*100,
-           type="o",  pch=23, col="forestgreen", lty=3)
-  }
-  
-  legend(1, 10000, c("PP", "IIHP(first)", "IIHP(best)", "ODCN"), col=c("black", "red", "red", "forestgreen"), pch=c(1,22,23))
-  
-  title(main=paste(" success rate/runtime allowed n:", ninstances))
-  
-}
+runs$alg.scheme <- NA
+runs$alg.scheme[runs$alg=="PP" | runs$alg=="RPP"] <- "C" 
+runs$alg.scheme[runs$alg=="ADPP" | runs$alg=="ADRPP"] <- "AD"
+runs$alg.scheme[runs$alg=="SDPP" | runs$alg=="SDRPP"] <- "SD"
+runs$alg.scheme[runs$alg=="ORCA"] <- "ORCA"
 
 
-successrate.vs.expansions <- function(runs, maxexpansions, algs, step=500) {
-  ninstances <- length(unique(runs[,"instance"]))
-  
-  succ.rate <- data.frame()
-  
-  i <- 1
-  for (exp in seq(0, maxexpansions, by=step)) {    
-    succ.rate[i, "exp"] <- exp
-    
-    for (alg in algs) {
-      succ.rate[i, alg] <- length(runs[runs$alg==alg & is.finite(runs$firstsolexp) & runs$firstsolexp <= exp, "instance"]) / ninstances    
-    }
-    
-    i <- i + 1
-  }
-  
-  plot(succ.rate[,"exp"], 
-       succ.rate[,"PP"]*100, 
-       type="o", ylim=c(0, 100), 
-       ylab="success rate",
-       xlab="expansions [ms]")
-  
-  points(succ.rate[,"exp"], 
-         succ.rate[,"IIHP"]*100, 
-         type="o", pch=22, col="red", lty=2)
-  
-  if (is.element("ODCN", names(succ.rate))) {
-    points(succ.rate[,"exp"], 
-           succ.rate[,"ODCN"]*100,
-           type="o",  pch=23, col="forestgreen", lty=3)
-  }
-  
-  legend(1, 10000, c("PP", "IIHP(first)", "IIHP(best)", "ODCN"), col=c("black", "red", "red", "forestgreen"), pch=c(1,22,23))
-  
-  title(main=paste(" success rate/expansions allowed n:", ninstances))
-  
-}
+runs$alg.ppvar <- "NA"
+runs$alg.ppvar[runs$alg=="PP" | runs$alg=="ADPP" | runs$alg=="SDPP"] <- "PP" 
+runs$alg.ppvar[runs$alg=="RPP" | runs$alg=="ADRPP" | runs$alg=="SDRPP"] <- "RPP"
 
-## IIHP cost ~ runtime based on the instances soved by PP at reftime##
+alg.palette <- brewer.pal(length(unique(runs$alg)), "Set1")[1:length(unique(runs$alg))-1]
+alg.palette <- brewer.pal(length(unique(runs$alg)), "Set1")[1:length(unique(runs$alg))-1]
 
-cost.vs.runtime <- function(results, reftime, maxtime, algs, step=500) {
-  
-  costs <- data.frame()
-  
-  results.reftime <- results[results$runtime <= reftime & is.finite(results$cost) & is.element(results$alg, algs) , ] 
-  
-  instance.cost <- ddply(results.reftime, .(instance, alg), summarise,                         
-                         cost = min(cost)
-  )
-  
-  instances.solved.by.all <- results.reftime[,"instance"]
-  
+orange <-"#E69F00"
+blue <- "#56B4E9"
+green <- "#009E73"
+yellow <- "#F0E442"
+
+get.color <- function(algs) {
+  pal <- c()
   for (alg in algs) {
-    instances.solved.by.all <- intersect(instances.solved.by.all, instance.cost[instance.cost$alg==alg, "instance"])
-  }    
-  
-  cat(
-    " There is total", length(unique(results$instance)), "instances.\n",
-    "There is ", length(unique(results.reftime$instance)), "instances solved by either ", algs ,".\n",
-    "There is ", length(instances.solved.by.all), "instances solved by all ", algs ,"at the same time at referece runtime "
-    , reftime, "ms\n")
-  
-  i <- 1
-  for (t in seq(reftime, maxtime, by=step)) {
-       
-    costs[i, "time"] <- t
+    if (is.na(alg)) {
+      pal <- c(pal, "#888888")
+    } 
     
-    results.t <- results[results$runtime <= t & is.element(results$instance, instances.solved.by.all), ]
+    else if (alg == "PP") {
+      pal <- c(pal, "firebrick3")
+    } else if (alg == "RPP") {
+      pal <- c(pal, "firebrick1")
+    } 
     
-    cat(length(unique(results.t$instance)), " instances considered at time ", t ," \n")
+    else if (alg == "SDPP") {
+      pal <- c(pal, "deepskyblue3")
+    } else if (alg == "SDRPP") {
+      pal <- c(pal, "deepskyblue1")
+    } 
     
-    instance.cost <- ddply(results.t, .(instance, alg), summarise, 
-                           cost = min(cost)
-    )    
+    else if (alg == "ADPP") {
+      pal <- c(pal, "springgreen3")
+    } else if (alg == "ADRPP") {
+      pal <- c(pal, "springgreen1")
+    } 
     
-    for (alg in algs) {
-      costs[i, alg] <- mean(instance.cost[instance.cost$alg==alg, "cost"])     
+    else if (alg == "ORCA"){
+      pal <- c(pal, "pink2")
+    } else {
+      pal <- c(pal, "#222222")
     }
+  }
+  return(pal)
+}
+
+get.shape <- function(algs) {
+  pal <- c()
+  for (alg in algs) {
+    if (is.na(alg)) {
+      pal <- c(pal, 7)
+    } 
     
-    i <- i +1
+    else if (alg == "PP") {
+      pal <- c(pal, 16)
+    } else if (alg == "RPP") {
+      pal <- c(pal, 21)
+    } 
+    
+    else if (alg == "SDPP") {
+      pal <- c(pal, 17)
+    } else if (alg == "SDRPP") {
+      pal <- c(pal, 24)
+    } 
+    
+    else if (alg == "ADPP") {
+      pal <- c(pal, 15)
+    } else if (alg == "ADRPP") {
+      pal <- c(pal, 22)
+    } 
+    
+    else if (alg == "ORCA"){
+      pal <- c(pal, 8)
+    } else {
+      pal <- c(pal, 5)
+    }
+  }
+  return(pal)
+}
+
+get.linetype <- function(algs) {
+  pal <- c()
+  for (alg in algs) {
+    if (is.na(alg)) {
+      pal <- c(pal, "twodash")
+    } else if (alg == "PP" | alg == "SDPP" | alg == "ADPP") {
+      pal <- c(pal, "solid")
+    } else if (alg == "RPP" | alg == "SDRPP" | alg == "ADRPP") {
+      pal <- c(pal, "solid")
+    } else {
+      pal <- c(pal, "dashed")
+    }
+  }
+  return(pal)
+}
+
+### scatter plot of all gathered raw data
+
+ggplot(runs, aes(instance, time/1000, color=alg, shape=alg)) + geom_point()
+
+###
+
+common.runs <- function(runs, algs) {
+  solved.by.all <- unique(runs$instance)
+  for (alg in algs) {
+    solved.by.all <- intersect(solved.by.all, unique(runs[runs$alg==alg & is.finite(runs$cost), "instance"]))                              
   }
   
-  ymin <- min(costs[,"IIHP"], na.rm=true)
+  common.runs <- runs[is.element(runs$instance, solved.by.all) & is.element(runs$alg,algs), ] 
+  return(common.runs)
+}
+
+
+############################################
+######### MAIN GRAPHS BEGIN ################
+############################################
+
+pd <- position_dodge(2)
+
+### success rate ####
+succ.nagents <- function(runs, timelimit) {
+  x <- runs[!is.na(runs$time) && runs$time<timelimit, ]
+  succ <- ddply(x, .(nagents, alg, radius), summarise,  
+                solved = sum(is.finite(cost)),
+                total = length(cost)
+  )
   
-  if (is.element("ODCN", names(costs))) {
-    ymin <- min(ymin,  min(costs[,"ODCN"], na.rm=true))
-  }
+  plot <- ggplot(succ, aes(x=nagents, y=solved, color=alg, linetype=alg))+
+    geom_line(size=1, position=pd)+ 
+    geom_point(aes(shape=alg), position=pd, size=4, fill="white") + 
+    scale_y_continuous(limits=c(0,max(succ$total)), name=paste("instances solved out of ", max(succ$total), "[-]")  ) +
+    scale_x_continuous(limits=c(0,maxagents+3), name="number of robots [-]") +
+    scale_color_manual(values=get.color(unique(succ$alg)), name="method") +
+    scale_linetype_manual(values=get.linetype(unique(succ$alg)), name="method") +
+    scale_shape_manual(values=get.shape(unique(succ$alg)), name="method") +
+    theme_bw() + 
+    theme(legend.position = "bottom", legend.direction = "horizontal") +
+    ggtitle("1: Coverage")
+  
+  return(plot)  
+}
+succ.nagents(runs[is.element(runs$alg,.("PP", "RPP", "SDPP", "SDRPP", "ADPP", "ADRPP", "ORCA")),], Inf)
+ggsave(filename=paste(imgdir, "succ.vs.nagents.pdf", sep=""), width=4, height=4)
+
+### runtime ###
+
+runtime.vs.nagents <- function(runs) {  
+  time.sum <- ddply(runs, .(nagents, alg, radius), summarise,  
+                    N = sum(!is.na(time)),
+                    mean = mean(time),
+                    med = median(time),
+                    sd = sd(time),
+                    se = sd / sqrt(N),
+                    min = min(time),
+                    max = max(time))
+  
+  plot <- ggplot(time.sum, aes(x=nagents, y=mean/1000, color=alg, linetype=alg, shape=alg))+
+    geom_errorbar(aes(ymin=(mean-se)/1000, ymax=(mean+se)/1000), width=2, position=pd, size=0.5, alpha=0.5) +
+    #geom_errorbar(aes(ymin=(mean-sd)/1000, ymax=(mean+sd)/1000), width=0.1, position=pd, size=2, alpha=1) +
+    geom_line(size=1, position=pd)+ 
+    geom_point(size=4, position=pd, fill="white")+   
+    #geom_text(aes(label=N, y=0, size=2), colour="black") + 
+
+    scale_color_manual(values=get.color(unique(time.sum$alg)), name="method") +
+    scale_linetype_manual(values=get.linetype(unique(time.sum$alg)), name="method") +
+    scale_shape_manual(values=get.shape(unique(time.sum$alg)), name="method") +
     
-  plot(costs[,"time"], 
-       costs[,"PP"], 
-       type="o", ylim=c(ymin, max(costs[,"PP"],na.rm=true)), 
-       ylab="cost",
-       xlab="runtime [ms]")
+    scale_y_continuous(name="time to converge [s]") +
+    scale_x_continuous(limits=c(0,maxagents+3), name="no of robots [-]") +  
+    
+    theme_bw() +
+    ggtitle("2: Avg. time to solution")
   
-  points(costs[,"time"], 
-         costs[,"IIHP"], 
-         type="o", pch=22, col="red", lty=2)
-  
-  if (is.element("ODCN", names(costs))) {
-    points(costs[,"time"], 
-          costs[,"ODCN"],
-         type="o",  pch=23, col="forestgreen", lty=3)
+  return(plot)
+}
+
+runtime.vs.nagents(common.runs(runs, .("PP","RPP","ADPP","ADRPP", "SDPP", "SDRPP")))
+ggsave(filename=paste(imgdir, "runtime.vs.nagents.pdf", sep=""), width=4, height=4)
+
+## speedup ~ no of agents ##
+
+speedup.vs.nagents <- function(runs) {
+  x <-runs
+  for (alg in c("PP", "ADPP","SDPP")) {
+    x$speedup[x$alg==alg] <- 1/(x[x$alg==alg, "time"]/x[x$alg=="PP", "time"])
   }
   
-  title(main=paste(" cost/runtime allowed n:", length(instances.solved.by.all)))
-}
+  for (alg in c("RPP","ADRPP","SDRPP")) {
+    x$speedup[x$alg==alg] <- 1/(x[x$alg==alg, "time"]/x[x$alg=="RPP", "time"])
+  }
+  
+  # summarize
+  
+  speedup.sum <- ddply(x, .(nagents, alg, radius), 
+                       summarise,  
+                       N = sum(!is.na(speedup)),
+                       mean = mean(speedup),
+                       med = median(speedup),
+                       sd = sd(speedup),
+                       se = sd / sqrt(N),
+                       min = min(speedup),
+                       max = max(speedup))
+  
+  maxy <- max(speedup.sum$mean+speedup.sum$se, na.rm=TRUE)
+  plot <- ggplot(speedup.sum, aes(x=nagents, y=mean, color=alg, shape=alg, linetype=alg))+
+    geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=2, position=pd, size=0.5, alpha=0.5) +
+    #geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=0, position=pd, size=2, alpha=0.7) +
+    geom_line(size=1, position=pd)+ 
+    geom_point(size=4, fill="white", position=pd)+   
+    #geom_point(aes(y=med), size=3, shape=18, position=pd)+   
+    #geom_text(aes(label=N, y=0, size=2), colour="black") + 
+    scale_y_continuous(limits=c(0,maxy), name="avg. speed-up rel. to PP/RPP [-]") + 
+    scale_x_continuous(limits=c(0, maxagents+3), name="number of robots [-]") + 
+    geom_hline(yintercept = 1, linetype = "longdash", colour="black", alpha=0.5) + 
     
+    scale_color_manual(values=get.color(unique(speedup.sum$alg)), name="method") +
+    scale_linetype_manual(values=get.linetype(unique(speedup.sum$alg)), name="method") +
+    scale_shape_manual(values=get.shape(unique(speedup.sum$alg)), name="method") +
+    theme_bw() +
+    ggtitle("3: Avg. speed-up rel. to centralized impl.")
+  
+  return(plot)
+}
+speedup.vs.nagents(common.runs(runs, .("PP","RPP","ADPP","ADRPP", "SDPP", "SDRPP")))
+ggsave(filename=paste(imgdir, "speedup.vs.nagents.pdf", sep=""), width=4, height=4)
 
-## successrate ~ nagents ##
 
-successrate.nagents <- function(runs) {
-  
-  successrate <- ddply(runs, .(nagents, alg), summarise,                     
-                    successrate = (sum(succeeded) / length(unique(instance)))
-                 )
+## replans vs. no of agents ##
 
-  plot(successrate[successrate$alg=="PP","successrate"])       
-
-  plot(successrate[successrate$alg=="PP","nagents"], 
-       successrate[successrate$alg=="PP","successrate"]*100, 
-       type="o", ylim=c(0,100), 
-       ylab="% solved",
-       xlab="number of agents")
+replans.per.agent.vs.nagents <- function(runs) {  
+  exp.sum <- ddply(runs, .(nagents, alg, radius), summarise,  
+                   N = sum(!is.na(replans.per.agent)),
+                   mean = mean(replans.per.agent, na.rm=TRUE),
+                   sd = sd(replans.per.agent, na.rm=TRUE),
+                   se = sd / sqrt(N),
+                   min = min(replans.per.agent, na.rm=TRUE),
+                   max = max(replans.per.agent, na.rm=TRUE))
   
-  points(successrate[successrate$alg=="IIHP","nagents"], 
-         successrate[successrate$alg=="IIHP","successrate"]*100, 
-         type="o", pch=22, col="red", lty=2)
+  plot <- ggplot(exp.sum[exp.sum$alg != "CPP",], aes(x=nagents, y=mean, color=alg, shape=alg, linetype=alg))+
+    geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=2, position=pd, size=0.5, alpha=0.5) +
+    geom_line(size=1, position=pd)+ 
+    geom_point(size=4, position=pd, fill="white")+   
+    geom_hline(yintercept = 2, linetype = "longdash", colour="black", alpha=0.5) + 
+    scale_x_continuous(limits=c(0,maxagents+3),name="number of robots [-]") +
+    scale_y_continuous(name="avg. replannings per robot  [-]") +
+    
+    scale_color_manual(values=get.color(unique(exp.sum$alg)), name="method") +
+    scale_linetype_manual(values=get.linetype(unique(exp.sum$alg)), name="method") +
+    scale_shape_manual(values=get.shape(unique(exp.sum$alg)), name="method") +
+    
+    theme_bw() +
+    ggtitle("4: Avg. number of replannings per robot")
   
-  points(successrate[successrate$alg=="ODCN","nagents"], 
-         successrate[successrate$alg=="ODCN","successrate"]*100, 
-         type="o",  pch=23, col="forestgreen", lty=3)
-  
-  
-  title(main="% solved/no of agent")
+  return(plot)
 }
 
-## Quality comparison
+replans.per.agent.vs.nagents(common.runs(runs, .("ADPP", "ADRPP", "SDPP", "SDRPP")))
+ggsave(filename=paste(imgdir, "replans.per.agent.vs.nagents.pdf", sep=""), width=4, height=4)
 
-quality.comparison <- function(runs) {
-  instances <- runs[,c("instance")]
-  cost.pp <- runs[runs$alg=="PP", c("instance", "bestsolcost")]
-  cost.iihp <- runs[runs$alg=="IIHP", c("instance", "bestsolcost")]
-  cost.odcn <- runs[runs$alg=="ODCN", c("instance", "bestsolcost")]
+### quality ###
+
+prolong.vs.nagents <- function(runs) {
+  x <- runs
   
+  for (alg in unique(runs$alg)) {
+    x$prolong[x$alg==alg] <- 100*((x[x$alg==alg, "cost"]-x[x$alg=="BASEST", "cost"])/x[x$alg=="BASEST", "cost"])
+  }
   
-  cost.diff.iihp.pp <- (cost.iihp$bestsolcost - cost.pp$bestsolcost) / cost.pp$bestsolcost
-  cost.diff.odcn.pp <- (cost.odcn$bestsolcost - cost.pp$bestsolcost) / cost.pp$bestsolcost
-  plot(cost.diff.iihp.pp, col="red")
-  points(cost.diff.odcn.pp, col="forestgreen", pch=20)
-  title(main="% cost saved IIHP vs PP ")  
+  # summarize
   
-  plot(cost.pp)
-  points(cost.iihp, col="forestgreen")  
+  prolong.sum <- ddply(x[x$alg != "BASEST",], .(nagents, alg), summarise,  
+                       N = sum(!is.na(prolong)),
+                       mean = mean(prolong, na.rm=TRUE),
+                       med = median(prolong, na.rm=TRUE),
+                       sd = sd(prolong, na.rm=TRUE),
+                       se = sd / sqrt(N),
+                       min = min(prolong, na.rm=TRUE),
+                       max = max(prolong, na.rm=TRUE))
+  
+  plot <- ggplot(prolong.sum, aes(x=nagents, y=mean,  color=alg, shape=alg, linetype=alg))+
+    geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=2, position=pd, size=0.5, alpha=0.5) +
+    geom_line(size=1, position=pd)+ 
+    geom_point(size=4, fill="white", position=pd)+ 
+    #geom_text(aes(label=N, y=100, size=2), colour="black") + 
+    scale_x_continuous(limits=c(0,maxagents+3), name="number of robots [-]") +
+    scale_y_continuous(name="prolongation [%]") +
+    
+    scale_color_manual(values=get.color(unique(prolong.sum$alg)), name="method") +
+    scale_linetype_manual(values=get.linetype(unique(prolong.sum$alg)), name="method") +
+    scale_shape_manual(values=get.shape(unique(prolong.sum$alg)), name="method") +
+    
+    theme_bw()  +
+    ggtitle("5: Avg. prolongation")
+  return(plot)
 }
 
-suboptimality.boxplot <- function(runs) {
-  
-  library(vioplot)
-  
-  # find instances solved by all
-  instances.solved.by.all <- 
-    intersect(
-    intersect(
-      runs[runs$alg=="PP" & runs$succeeded==1, "instance"],
-      runs[runs$alg=="IIHP" & runs$succeeded==1, "instance"]),
-      runs[runs$alg=="ODCN" & runs$succeeded==1, "instance"])
-  
-  runs <- runs[is.element(runs$instance, instances.solved.by.all),] 
-
-  instance.cost <- data.frame(instance = instances.solved.by.all,
-                              ODCN = runs[is.element(runs$instance, instances.solved.by.all) & runs$alg=="ODCN", "bestsolcost"],
-                              PP = runs[is.element(runs$instance, instances.solved.by.all) & runs$alg=="PP", "bestsolcost"],
-                              IIHP = runs[is.element(runs$instance, instances.solved.by.all) & runs$alg=="IIHP", "bestsolcost"]
-  )
-  
-  suboptimality <- data.frame(instance = instance.cost["instance"],
-    PP = ((instance.cost["PP"]-instance.cost["ODCN"])/instance.cost["ODCN"]),
-    IIHP = ((instance.cost["IIHP"]-instance.cost["ODCN"])/instance.cost["ODCN"])
-  )
-  
-  vioplot(suboptimality[,"PP"], suboptimality[,"IIHP"], names=c("PP", "IIHP"))
-  title( main=paste("Suboptimality. n: ", nrow(suboptimality)) )
-  
-}
+prolong.vs.nagents(common.runs(runs, .("PP","RPP","ADPP","ADRPP", "SDPP", "SDRPP", "BASEST")))
+ggsave(filename=paste(imgdir, "prolong.vs.nagents.pdf", sep=""), width=4, height=4)
 
 
-improvement.boxplot <- function(runs) {
-  library(vioplot)
-  
-  # find instances solved by both
-  instances.solved.by.both <-     
-      intersect(
-        runs[runs$alg=="PP" & runs$succeeded==1, "instance"],
-        runs[runs$alg=="IIHP" & runs$succeeded==1, "instance"]
-      )
-  
-  runs <- runs[is.element(runs$instance, instances.solved.by.both),] 
-  
-  ### Continue here with making a table that has instance, costpp, costiihp and costodcn... 
-  
-  instance.cost <- data.frame(instance = instances.solved.by.both,
-                              PP = runs[is.element(runs$instance, instances.solved.by.both) & runs$alg=="PP", "bestsolcost"],
-                              IIHP = runs[is.element(runs$instance, instances.solved.by.both) & runs$alg=="IIHP", "bestsolcost"]
-                             )                              
-  
-  
-  improvement <- data.frame(instance = instance.cost["instance"],                              
-                              IIHP = ((instance.cost["PP"]-instance.cost["IIHP"])/instance.cost["PP"])
-  )
-  
-  
-  vioplot(improvement[,"IIHP"])
-  title( main=paste("Improvement of IIHP over PP n:", nrow(suboptimality)) )  
-}
+########### Comparison with ORCA  ###################
+
+prolong.vs.nagents(common.runs(runs, .("ADRPP", "ORCA", "BASEST")))
+ggsave(filename=paste(imgdir, "prolong.vs.nagents.orca.pdf", sep=""), width=4, height=4)
 
 
-### first and best solution for the algorithms
-first.and.bestsol <- function(runs) {
-  plot(runs[runs$alg=="PP",c("firstsolcost")], ylab="cost")
-  points(runs[runs$alg=="IIHP",c("firstsolcost")], col="red", type="p", pch=4)
-  points(runs[runs$alg=="IIHP",c("bestsolcost")], col="red4", type="p", pch=5)
-  points(runs[runs$alg=="ODCN",c("bestsolcost")], col="forestgreen", type="p", pch=20)
-  text(1:length(runs[runs$alg=="IIHP","instance"]), runs[runs$alg=="IIHP","bestsolcost"], runs[runs$alg=="IIHP","instance"], cex=0.6, pos=1, col="red")
-  legend("topleft", c("PP", "IIHP(first)", "IIHP(best)", "ODCN"), col=c("black", "red", "red", "forestgreen"), pch=c(1,4,5,20))
-  title("First and best solution")
-}
+#####################################################
+#####################################################
 
-### runtime to first solution
-runtime.to.firstsol <- function(runs) {
-  plot(runs[runs$alg=="PP",c("firstsoltime")], ylim=c(0,6000))
-  points(runs[runs$alg=="IIHP",c("firstsoltime")], col="red", type="p", pch=4)
-  points(runs[runs$alg=="ODCN",c("firstsoltime")], col="forestgreen", type="p", pch=20)
-  title("Runtime to first solution [ms]")
-}
 
-### expansions to first solution
-expansions.to.firstsol <- function(runs) {
-  plot(runs[runs$alg=="PP",c("firstsolexp")], ylim=c(0,100000))
-  points(runs[runs$alg=="IIHP",c("firstsolexp")], col="red", type="p", pch=4)
-  points(runs[runs$alg=="ODCN",c("firstsolexp")], col="forestgreen", type="p", pch=20)
-  title("Expansions to first solution")
-}
 
-### expansions to best solution
-expansions.to.bestsol <- function(runs) {
-  plot(runs[runs$alg=="PP",c("bestsolexp")], ylim=c(0,1000000))
-  points(runs[runs$alg=="IIHP",c("bestsolexp")], col="red", type="p", pch=4)
-  points(runs[runs$alg=="ODCN",c("bestsolexp")], col="forestgreen", type="p", pch=20)
-  title("Expansions to best solution")
-}
 
+
+
+####### GRID OF ALL PLOTS ##########
+
+pd <- position_dodge(2)
+
+success <- 
+  succ.nagents(runs[is.element(runs$alg,.("PP", "RPP", "SDPP", "SDRPP", "ADPP", "ADRPP", "ORCA")),], Inf)
+
+runtime <-
+  runtime.vs.nagents(common.runs(runs, .("PP","RPP","ADPP","ADRPP", "SDPP", "SDRPP")))
+
+speedup <-
+  speedup.vs.nagents(common.runs(runs, .("PP","RPP","ADPP","ADRPP", "SDPP", "SDRPP")))
+
+replans <-
+  replans.per.agent.vs.nagents(common.runs(runs, .("ADPP", "ADRPP", "SDPP", "SDRPP")))
+
+prolong <-
+  prolong.vs.nagents(common.runs(runs, .("PP","RPP","ADPP","ADRPP", "SDPP", "SDRPP", "BASEST")))
+
+g_legend<-function(p){
+  tmp <- ggplotGrob(p)
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)}
+
+legend <- g_legend(success)
+lwidth <- sum(legend$width)
+lheight <- sum(legend$heights)
+
+grid.plots <- arrangeGrob(
+  success + theme(legend.position="none"), 
+  runtime + theme(legend.position="none"),
+  speedup + theme(legend.position="none"),
+  replans + theme(legend.position="none"),
+  prolong + theme(legend.position="none"),  
+  ncol=1)
+
+ggsave(filename=paste(plotsdir, env,".pdf", sep=""), plot=grid.plots, width=5, height=18)
+grid.plots
