@@ -1,20 +1,29 @@
-How to run an experiment:
+How to run an experiment
+========================
 
-1. Get the fresh build of the deconflictiontools package 
+1) Run the experiments
+----------------------
 
- ./update_solver.sh
+To, run:
 
-2. Generate the problem instances for different values of the paremeters. The script prepare.sh is meant to be customized for each experiment set-up.
+The following command 
 
- ./prepare.sh
- 
- The xml with problem instances will be generated to a specified subfolder ENV in instances. The input data file for parallel is in the file named instances/ENV/data.in, the output data is in  instances/ENV/data.out, the head (name of each column in data.out) is in  instances/ENV/head.
+$ ./run.sh INSTANCESET NCPU
 
-3. Run the experiment using parallel. Example: use the following command
+executes an experiment on instanceset INSTANCESET using NCPU cpus.
 
- ./run.sh empty 4
- 
- to run the experiment with the problem instances in the folder instances/empty on 4 CPUs. The experiment results will be in the file instances/empty/data.out.head. 
- 
- 4. Open process.r in RStudio and analyze the data stored in instances/ENV/data.out.head.  
+To run all experiments of one core, run the following commands:
+
+$ ./run.sh empty-hall-r22 1
+$ ./run.sh empty-hall-r22-docks 1
+$ ./run.sh ubremen-r27 1
+$ ./run.sh ubremen-r27-docks 1
+$ ./run.sh warehouse-r25 1
+$ ./run.sh warehouse-r25-docks 1
+
+2) Process the data
+-------------------
+
+The experiment results will stored be in the instances/INSTANCESET/data.out.head. 
+The results are processed using an R-script in process.r.  
 
