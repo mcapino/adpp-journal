@@ -4,8 +4,6 @@ How to run an experiment
 1) Run the experiments
 ----------------------
 
-To, run:
-
 The following command 
 
 $ ./run.sh INSTANCESET NCPU
@@ -27,5 +25,10 @@ $ ./run.sh warehouse-r25-docks 1
 The experiment results will stored be in the instances/INSTANCESET/data.out.head. 
 The results are processed using an R-script in process.r. 
 Edit the name of the instance set at the beginning of the script and run the script. 
-The PDF with plots will be in instances/plots. 
+The resulting plots will be in instances/plots folder. 
+
+3) Inspect the source code
+--------------------------
+
+The source code of all solvers used in the experiment is in admap-solver folder.
 
