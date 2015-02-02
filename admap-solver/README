@@ -11,6 +11,10 @@ The jar archive with all dependencies will be in:
 
 target/admap-1.0-SNAPSHOT-jar-with-dependencies.jar
 
+To update the implementation of algorithms used in the experiment, replace solver.jar with the newly build jar package:
+
+cp target/admap-1.0-SNAPSHOT-jar-with-dependencies.jar ../solver.jar
+
 Alternatively, you can open the project in your favorite IDE, i.e. in Eclipse.
 
 Getting started
@@ -30,11 +34,11 @@ Detailed information can be derived from the source code, in particular from the
 Example: 
 --------
 
-	Tshe following command will run the ADRPP on the example problem instance described in file problems/ubremen-n15.xml.
+	The following command will run the ADRPP on the example problem instance described in file instances/ubremen-r27-docks/249.xml.
 
-	$ java -jar target/admap-1.0-SNAPSHOT-jar-with-dependencies.jar cz.agents.admap.creator.ScenarioCreator -problemfile problems/ubremen-n15.xml -method ADRPP -maxtime 15000 -timestep 45 -showvis
+	$ java -jar admap-solver/target/admap-1.0-SNAPSHOT-jar-with-dependencies.jar cz.agents.admap.creator.ScenarioCreator -problemfile instances/ubremen-r27-docks/249.xml -method ADRPP -maxtime 15000 -timestep 27 -showvis
 
-Visualization control: 
+Visualization control:  
 ----------------------
 
 When the visualization window pops-up, use the following keys to toggle various useful visualization layers:

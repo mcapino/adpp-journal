@@ -1,0 +1,38 @@
+How to run an experiment
+========================
+
+This repository contains the implementation of algorithms PP, RPP, SDPP, SDRPP, ADPP ADRPP as described in the article 
+
+M. Čáp, P. Novák, A. Kleiner, and M. Selecký, “Prioritized planning algorithms for trajectory coordination of multiple mobile robots,” IEEE transactions on automation science and engineering (in review), 2014
+
+and the datasets used for their comparison. The following document describes how to recompute the results.
+
+1) Run the experiments
+----------------------
+
+The following command 
+
+$ ./run.sh INSTANCESET NCPU
+
+executes the experimental comparison on instanceset INSTANCESET using NCPU cpus (i.e. this parameter specifies how many simulation will be run in parallel).
+
+To run all experiments on one core, run the following commands:
+
+$ ./run.sh empty-hall-r22 1
+$ ./run.sh empty-hall-r22-docks 1
+$ ./run.sh ubremen-r27 1
+$ ./run.sh ubremen-r27-docks 1
+$ ./run.sh warehouse-r25 1
+$ ./run.sh warehouse-r25-docks 1
+
+2) Process the data
+-------------------
+
+The experiment results for the instanceset INSTANCESET will stored be in the csv file named instances/INSTANCESET/data.out.head. 
+The results are processed using an R-script in process.r. Edit the name of the instance set at the beginning of the script and run the script. The resulting plots will be generated in instances/plots folder. 
+
+3) Inspect the source code
+--------------------------
+
+The source code of all solvers used in the experiment is in admap-solver folder. Consult admap-solver/README for details.
+
