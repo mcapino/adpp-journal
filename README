@@ -1,11 +1,11 @@
 How to run an experiment
 ========================
 
-This repository contains the implementation of algorithms PP, RPP, SDPP, SDRPP, ADPP ADRPP as described in the article 
+This repository contains the implementation of algorithms PP, RPP, SDPP, SDRPP, ADPP, and ADRPP as described in the article 
 
 M. Čáp, P. Novák, A. Kleiner, and M. Selecký, “Prioritized planning algorithms for trajectory coordination of multiple mobile robots,” IEEE transactions on automation science and engineering (in review), 2014
 
-and the datasets used for their comparison. The following document describes how to recompute the results.
+and the datasets used for their comparison. This document describes how to recompute the experiments from the paper.
 
 1) Run the experiments
 ----------------------
