@@ -1,0 +1,4 @@
+source("functions.r")
+min.instances.for.summary <- 10
+make.grid.plot("empty-hall-r22", "plots/", min.instances.for.summary)
+

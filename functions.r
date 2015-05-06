@@ -5,39 +5,8 @@ library(ggplot2)
 library(RColorBrewer)
 library(gridExtra)
 
-### Load the data
-
-env <- "empty-hall-r22" ### <--- EDIT THE INSTANCESET NAME HERE
-
-dir <- paste("instances/",env, sep="")
-imgdir <- paste(dir, "/figs/", sep="")
-plotsdir <- paste(dir, "/../plots/", sep="")
-runs <- read.csv(file=paste(dir, "/data.out.head", sep=""), head=TRUE, sep=";")
-runs <- runs[order(runs$instance, runs$alg),]
-runs$time[runs$time==0] <- NA
-runs$agents.in.cluster <- runs$nagents/runs$clusters
-runs$agents.in.cluster.ceil <- ceiling(runs$nagents/runs$clusters)
-runs$replans.per.agent <- runs$replans / runs$nagents
-runs$expansions.per.replan <- runs$expansions/runs$replans 
-runs$time[runs$alg=="ORCA"] <- NA
-
-maxagents <- max(runs$nagents)
-
-runs$alg = factor(runs$alg,levels=c("PP", "RPP", "SDPP", "SDRPP", "ADPP",  "ADRPP", "ORCA", "BASEST"))
-
-runs$alg.scheme <- NA
-runs$alg.scheme[runs$alg=="PP" | runs$alg=="RPP"] <- "C" 
-runs$alg.scheme[runs$alg=="ADPP" | runs$alg=="ADRPP"] <- "AD"
-runs$alg.scheme[runs$alg=="SDPP" | runs$alg=="SDRPP"] <- "SD"
-runs$alg.scheme[runs$alg=="ORCA"] <- "ORCA"
-
-
-runs$alg.ppvar <- "NA"
-runs$alg.ppvar[runs$alg=="PP" | runs$alg=="ADPP" | runs$alg=="SDPP"] <- "PP" 
-runs$alg.ppvar[runs$alg=="RPP" | runs$alg=="ADRPP" | runs$alg=="SDRPP"] <- "RPP"
-
-alg.palette <- brewer.pal(length(unique(runs$alg)), "Set1")[1:length(unique(runs$alg))-1]
-alg.palette <- brewer.pal(length(unique(runs$alg)), "Set1")[1:length(unique(runs$alg))-1]
+#alg.palette <- brewer.pal(length(unique(runs$alg)), "Set1")[1:length(unique(runs$alg))-1]
+#alg.palette <- brewer.pal(length(unique(runs$alg)), "Set1")[1:length(unique(runs$alg))-1]
 
 orange <-"#E69F00"
 blue <- "#56B4E9"
@@ -128,10 +97,6 @@ get.linetype <- function(algs) {
   return(pal)
 }
 
-### scatter plot of all gathered raw data
-
-ggplot(runs, aes(instance, time/1000, color=alg, shape=alg)) + geom_point()
-
 ###
 
 common.runs <- function(runs, algs) {
@@ -149,36 +114,32 @@ common.runs <- function(runs, algs) {
 ######### MAIN GRAPHS BEGIN ################
 ############################################
 
-pd <- position_dodge(2)
-
 ### success rate ####
-succ.nagents <- function(runs, timelimit) {
+succ.nagents <- function(runs, timelimit, maxagents) {
   x <- runs[!is.na(runs$time) && runs$time<timelimit, ]
   succ <- ddply(x, .(nagents, alg, radius), summarise,  
                 solved = sum(is.finite(cost)),
-                total = length(cost)
+                total = length(unique(instance))
   )
   
-  plot <- ggplot(succ, aes(x=nagents, y=solved, color=alg, linetype=alg))+
+  plot <- ggplot(succ, aes(x=nagents, y=(solved/total)*100, color=alg, linetype=alg))+
     geom_line(size=1, position=pd)+ 
     geom_point(aes(shape=alg), position=pd, size=4, fill="white") + 
-    scale_y_continuous(limits=c(0,max(succ$total)), name=paste("instances solved out of ", max(succ$total), "[-]")  ) +
+    scale_y_continuous(limits=c(0,100), name=paste("instances solved [%]")) +
     scale_x_continuous(limits=c(0,maxagents+3), name="number of robots [-]") +
     scale_color_manual(values=get.color(unique(succ$alg)), name="method") +
     scale_linetype_manual(values=get.linetype(unique(succ$alg)), name="method") +
     scale_shape_manual(values=get.shape(unique(succ$alg)), name="method") +
     theme_bw() + 
     theme(legend.position = "bottom", legend.direction = "horizontal") +
-    ggtitle("1: Coverage")
+    ggtitle("1: Coverage") #ggtitle(paste("1: Coverage (", max(succ$total),"instances)"))
   
   return(plot)  
 }
-succ.nagents(runs[is.element(runs$alg,.("PP", "RPP", "SDPP", "SDRPP", "ADPP", "ADRPP", "ORCA")),], Inf)
-ggsave(filename=paste(imgdir, "succ.vs.nagents.pdf", sep=""), width=4, height=4)
 
 ### runtime ###
 
-runtime.vs.nagents <- function(runs) {  
+runtime.vs.nagents <- function(runs, min.instances, maxagents) {  
   time.sum <- ddply(runs, .(nagents, alg, radius), summarise,  
                     N = sum(!is.na(time)),
                     mean = mean(time),
@@ -187,6 +148,7 @@ runtime.vs.nagents <- function(runs) {
                     se = sd / sqrt(N),
                     min = min(time),
                     max = max(time))
+  time.sum <- time.sum[time.sum$N >= min.instances, ]
   
   plot <- ggplot(time.sum, aes(x=nagents, y=mean/1000, color=alg, linetype=alg, shape=alg))+
     geom_errorbar(aes(ymin=(mean-se)/1000, ymax=(mean+se)/1000), width=2, position=pd, size=0.5, alpha=0.5) +
@@ -208,12 +170,9 @@ runtime.vs.nagents <- function(runs) {
   return(plot)
 }
 
-runtime.vs.nagents(common.runs(runs, .("PP","RPP","ADPP","ADRPP", "SDPP", "SDRPP")))
-ggsave(filename=paste(imgdir, "runtime.vs.nagents.pdf", sep=""), width=4, height=4)
-
 ## speedup ~ no of agents ##
 
-speedup.vs.nagents <- function(runs) {
+speedup.vs.nagents <- function(runs, min.instances, maxagents) {
   x <-runs
   for (alg in c("PP", "ADPP","SDPP")) {
     x$speedup[x$alg==alg] <- 1/(x[x$alg==alg, "time"]/x[x$alg=="PP", "time"])
@@ -235,6 +194,8 @@ speedup.vs.nagents <- function(runs) {
                        min = min(speedup),
                        max = max(speedup))
   
+  speedup.sum <- speedup.sum[speedup.sum$N >= min.instances, ]
+  
   maxy <- max(speedup.sum$mean+speedup.sum$se, na.rm=TRUE)
   plot <- ggplot(speedup.sum, aes(x=nagents, y=mean, color=alg, shape=alg, linetype=alg))+
     geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=2, position=pd, size=0.5, alpha=0.5) +
@@ -255,13 +216,10 @@ speedup.vs.nagents <- function(runs) {
   
   return(plot)
 }
-speedup.vs.nagents(common.runs(runs, .("PP","RPP","ADPP","ADRPP", "SDPP", "SDRPP")))
-ggsave(filename=paste(imgdir, "speedup.vs.nagents.pdf", sep=""), width=4, height=4)
-
 
 ## replans vs. no of agents ##
 
-replans.per.agent.vs.nagents <- function(runs) {  
+replans.per.agent.vs.nagents <- function(runs, min.instances, maxagents) {  
   exp.sum <- ddply(runs, .(nagents, alg, radius), summarise,  
                    N = sum(!is.na(replans.per.agent)),
                    mean = mean(replans.per.agent, na.rm=TRUE),
@@ -269,6 +227,8 @@ replans.per.agent.vs.nagents <- function(runs) {
                    se = sd / sqrt(N),
                    min = min(replans.per.agent, na.rm=TRUE),
                    max = max(replans.per.agent, na.rm=TRUE))
+  
+  exp.sum <- exp.sum[exp.sum$N >= min.instances, ]
   
   plot <- ggplot(exp.sum[exp.sum$alg != "CPP",], aes(x=nagents, y=mean, color=alg, shape=alg, linetype=alg))+
     geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=2, position=pd, size=0.5, alpha=0.5) +
@@ -283,17 +243,14 @@ replans.per.agent.vs.nagents <- function(runs) {
     scale_shape_manual(values=get.shape(unique(exp.sum$alg)), name="method") +
     
     theme_bw() +
-    ggtitle("4: Avg. number of replannings per robot")
+    ggtitle("4: Avg. number of messages broadcast per robot")
   
   return(plot)
 }
 
-replans.per.agent.vs.nagents(common.runs(runs, .("ADPP", "ADRPP", "SDPP", "SDRPP")))
-ggsave(filename=paste(imgdir, "replans.per.agent.vs.nagents.pdf", sep=""), width=4, height=4)
-
 ### quality ###
 
-prolong.vs.nagents <- function(runs) {
+prolong.vs.nagents <- function(runs, min.instances, maxagents) {
   x <- runs
   
   for (alg in unique(runs$alg)) {
@@ -310,6 +267,8 @@ prolong.vs.nagents <- function(runs) {
                        se = sd / sqrt(N),
                        min = min(prolong, na.rm=TRUE),
                        max = max(prolong, na.rm=TRUE))
+  
+  prolong.sum <- prolong.sum[prolong.sum$N >= min.instances, ]
   
   plot <- ggplot(prolong.sum, aes(x=nagents, y=mean,  color=alg, shape=alg, linetype=alg))+
     geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=2, position=pd, size=0.5, alpha=0.5) +
@@ -328,60 +287,70 @@ prolong.vs.nagents <- function(runs) {
   return(plot)
 }
 
-prolong.vs.nagents(common.runs(runs, .("PP","RPP","ADPP","ADRPP", "SDPP", "SDRPP", "BASEST")))
-ggsave(filename=paste(imgdir, "prolong.vs.nagents.pdf", sep=""), width=4, height=4)
+### plot everything ###
 
-
-########### Comparison with ORCA  ###################
-
-prolong.vs.nagents(common.runs(runs, .("ADRPP", "ORCA", "BASEST")))
-ggsave(filename=paste(imgdir, "prolong.vs.nagents.orca.pdf", sep=""), width=4, height=4)
-
-
-#####################################################
-#####################################################
-
-
-
-
-
-
-####### GRID OF ALL PLOTS ##########
-
-pd <- position_dodge(2)
-
-success <- 
-  succ.nagents(runs[is.element(runs$alg,.("PP", "RPP", "SDPP", "SDRPP", "ADPP", "ADRPP", "ORCA")),], Inf)
-
-runtime <-
-  runtime.vs.nagents(common.runs(runs, .("PP","RPP","ADPP","ADRPP", "SDPP", "SDRPP")))
-
-speedup <-
-  speedup.vs.nagents(common.runs(runs, .("PP","RPP","ADPP","ADRPP", "SDPP", "SDRPP")))
-
-replans <-
-  replans.per.agent.vs.nagents(common.runs(runs, .("ADPP", "ADRPP", "SDPP", "SDRPP")))
-
-prolong <-
-  prolong.vs.nagents(common.runs(runs, .("PP","RPP","ADPP","ADRPP", "SDPP", "SDRPP", "BASEST")))
-
-g_legend<-function(p){
-  tmp <- ggplotGrob(p)
-  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
-  legend <- tmp$grobs[[leg]]
-  return(legend)}
-
-legend <- g_legend(success)
-lwidth <- sum(legend$width)
-lheight <- sum(legend$heights)
-
-grid.plots <- arrangeGrob(
-  success + theme(legend.position="none"), 
-  runtime + theme(legend.position="none"),
-  speedup + theme(legend.position="none"),
-  replans + theme(legend.position="none"),
-  prolong + theme(legend.position="none"),  
-  ncol=1)
-
-ggsave(filename=paste(plotsdir, env,".pdf", sep=""), plot=grid.plots, width=5, height=18)
-grid.plots
+make.grid.plot <- function(env, plotsdir, min.instances.for.summary) {
+  
+  pd <- position_dodge(2)
+  
+  dir <- paste("instances/",env, sep="")
+  imgdir <- paste(dir, "/figs/", sep="")
+  runs <- read.csv(file=paste(dir, "/data.out.head", sep=""), head=TRUE, sep=";")
+  runs <- runs[order(runs$instance, runs$alg),]
+  runs$time[runs$time==0] <- NA
+  runs$agents.in.cluster <- runs$nagents/runs$clusters
+  runs$agents.in.cluster.ceil <- ceiling(runs$nagents/runs$clusters)
+  runs$replans.per.agent <- runs$replans / runs$nagents
+  runs$expansions.per.replan <- runs$expansions/runs$replans 
+  runs$time[runs$alg=="ORCA"] <- NA
+  
+  maxagents <- max(runs$nagents)
+  
+  runs$alg = factor(runs$alg,levels=c("PP", "RPP", "SDPP", "SDRPP", "ADPP",  "ADRPP", "ORCA", "BASEST"))
+  
+  runs$alg.scheme <- NA
+  runs$alg.scheme[runs$alg=="PP" | runs$alg=="RPP"] <- "C" 
+  runs$alg.scheme[runs$alg=="ADPP" | runs$alg=="ADRPP"] <- "AD"
+  runs$alg.scheme[runs$alg=="SDPP" | runs$alg=="SDRPP"] <- "SD"
+  runs$alg.scheme[runs$alg=="ORCA"] <- "ORCA"
+  
+  runs$alg.ppvar <- "NA"
+  runs$alg.ppvar[runs$alg=="PP" | runs$alg=="ADPP" | runs$alg=="SDPP"] <- "PP" 
+  runs$alg.ppvar[runs$alg=="RPP" | runs$alg=="ADRPP" | runs$alg=="SDRPP"] <- "RPP"
+  
+  success <- 
+    succ.nagents(runs[is.element(runs$alg,.("PP", "RPP", "SDPP", "SDRPP", "ADPP", "ADRPP", "ORCA")),], Inf, maxagents)
+  
+  runtime <-
+    runtime.vs.nagents(common.runs(runs, .("PP","RPP","ADPP","ADRPP", "SDPP", "SDRPP")), min.instances.for.summary, maxagents)
+  
+  speedup <-
+    speedup.vs.nagents(common.runs(runs, .("PP","RPP","ADPP","ADRPP", "SDPP", "SDRPP")), min.instances.for.summary, maxagents)
+  
+  replans <-
+    replans.per.agent.vs.nagents(common.runs(runs, .("ADPP", "ADRPP", "SDPP", "SDRPP")), min.instances.for.summary, maxagents)
+  
+  prolong <-
+    prolong.vs.nagents(common.runs(runs, .("PP","RPP","ADPP","ADRPP", "SDPP", "SDRPP", "BASEST")), min.instances.for.summary, maxagents)
+  
+  g_legend<-function(p){
+    tmp <- ggplotGrob(p)
+    leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+    legend <- tmp$grobs[[leg]]
+    return(legend)}
+  
+  legend <- g_legend(success)
+  lwidth <- sum(legend$width)
+  lheight <- sum(legend$heights)
+  
+  grid.plots <- arrangeGrob(
+    success + theme(legend.position="none"), 
+    prolong + theme(legend.position="none"),
+    runtime + theme(legend.position="none"),
+    speedup + theme(legend.position="none"),
+    replans + theme(legend.position="none"),     
+    ncol=1)
+  
+  ggsave(filename=paste(plotsdir, env,".pdf", sep=""), plot=grid.plots, width=5, height=18)
+  grid.plots
+}
