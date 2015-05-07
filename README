@@ -1,38 +1,23 @@
 How to run an experiment
 ========================
 
-This repository contains the implementation of algorithms PP, RPP, SDPP, SDRPP, ADPP, and ADRPP as described in the article 
+This repository contains the implementation of algorithms PP, RPP, SDPP, SDRPP, ADPP, and ADRPP described in the article 
 
-M. Čáp, P. Novák, A. Kleiner, and M. Selecký, “Prioritized planning algorithms for trajectory coordination of multiple mobile robots,” IEEE transactions on automation science and engineering (in review), 2014
+M. Čáp, P. Novák, A. Kleiner, and M. Selecký, “Prioritized planning algorithms for trajectory coordination of multiple mobile robots,” IEEE transactions on automation science and engineering, 2015.
 
-and the datasets used for their comparison. This document describes how to recompute the experiments from the paper.
+Further, it contains the dataset and script neccessary to reproduce the experimental results reported in the article.
 
-1) Run the experiments
+Running the experiments
 ----------------------
+The entire experiment can be recomputed by executing this run-experiment.sh script.
 
-The following command 
+The script requires that the following software is installed on the machine where it is executed: 
+ * jdk8
+ * gnu parallel
+ * R programming language.
 
-$ ./run.sh INSTANCESET NCPU
 
-executes the experimental comparison on instanceset INSTANCESET using NCPU cpus (i.e. this parameter specifies how many simulation will be run in parallel).
-
-To run all experiments on one core, run the following commands:
-
-$ ./run.sh empty-hall-r22 1
-$ ./run.sh empty-hall-r22-docks 1
-$ ./run.sh ubremen-r27 1
-$ ./run.sh ubremen-r27-docks 1
-$ ./run.sh warehouse-r25 1
-$ ./run.sh warehouse-r25-docks 1
-
-2) Process the data
--------------------
-
-The experiment results for the instanceset INSTANCESET will stored be in the csv file named instances/INSTANCESET/data.out.head. 
-The results are processed using an R-script in process.r. Edit the name of the instance set at the beginning of the script and run the script. The resulting plots will be generated in instances/plots folder. 
-
-3) Inspect the source code
---------------------------
-
+Inspect the source code
+-----------------------
 The source code of all solvers used in the experiment is in admap-solver folder. Consult admap-solver/README for details.
 

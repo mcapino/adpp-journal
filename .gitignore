@@ -4,3 +4,4 @@
 log/
 instances/*/*.log
 instances/*/*.out*
+*~

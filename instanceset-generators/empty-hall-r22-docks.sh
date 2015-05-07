@@ -11,7 +11,7 @@ timeout=240000
 
 mkdir -p $instancefolder
 rm $instancefolder/*
-cp prepare.sh $instancefolder/
+cp $0 $instancefolder/
 
 instance=0
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Argument = -j jar -c configuration -o outputfile -s sshlogin -v verbose -V very verbose
+# Argument = -j jar -c configuration -o outputfile -s sshlogin -v verbose
 
 usage()
 {
@@ -18,7 +18,6 @@ OPTIONS:
 			for n tasks running at once on host use n/login
    -m			Each output to single file
    -v			Progress informations
-   -V           More verbose  
 * required
 
 Examples:
@@ -36,7 +35,7 @@ Run one task in parallel on local machine, 4 on hostA and 6 on hostB
 EOF
 }
 
-while getopts “hj:c:o:f:ms:n:v:V” OPTION
+while getopts “hj:c:o:f:ms:n:v” OPTION
 do
      case $OPTION in
 	h)
@@ -64,10 +63,6 @@ do
 	v)
 		V_ARG="--progress"
 		;;
-		
-	V)
-		V_ARG="-t"
-	;;	
 	
 	?)
 		usage

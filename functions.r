@@ -165,7 +165,7 @@ runtime.vs.nagents <- function(runs, min.instances, maxagents) {
     scale_x_continuous(limits=c(0,maxagents+3), name="no of robots [-]") +  
     
     theme_bw() +
-    ggtitle("2: Avg. time to solution")
+    ggtitle("3: Avg. time to solution")
   
   return(plot)
 }
@@ -212,7 +212,7 @@ speedup.vs.nagents <- function(runs, min.instances, maxagents) {
     scale_linetype_manual(values=get.linetype(unique(speedup.sum$alg)), name="method") +
     scale_shape_manual(values=get.shape(unique(speedup.sum$alg)), name="method") +
     theme_bw() +
-    ggtitle("3: Avg. speed-up rel. to centralized impl.")
+    ggtitle("4: Avg. speed-up rel. to centralized impl.")
   
   return(plot)
 }
@@ -243,7 +243,7 @@ replans.per.agent.vs.nagents <- function(runs, min.instances, maxagents) {
     scale_shape_manual(values=get.shape(unique(exp.sum$alg)), name="method") +
     
     theme_bw() +
-    ggtitle("4: Avg. number of messages broadcast per robot")
+    ggtitle("5: Avg. number of messages broadcast per robot")
   
   return(plot)
 }
@@ -283,7 +283,7 @@ prolong.vs.nagents <- function(runs, min.instances, maxagents) {
     scale_shape_manual(values=get.shape(unique(prolong.sum$alg)), name="method") +
     
     theme_bw()  +
-    ggtitle("5: Avg. prolongation")
+    ggtitle("2: Avg. prolongation")
   return(plot)
 }
 
