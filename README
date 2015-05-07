@@ -9,7 +9,7 @@ Further, it contains the dataset and script neccessary to reproduce the experime
 
 Running the experiments
 ----------------------
-The entire experiment can be recomputed by executing this run-experiment.sh script.
+The entire experiment can be recomputed by executing run-experiment.sh script.
 
 The script requires that the following software is installed on the machine where it is executed: 
  * jdk8
