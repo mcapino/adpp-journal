@@ -14,12 +14,12 @@ echo " Compiling the implementation of algorithms, instance generator, simulator
 echo "---------------------------------------------------------------------------------"
 
 cd admap-solver
-mvn package
-cp target/admap-1.0-SNAPSHOT-jar-with-dependencies.jar ../solver.jar
+mvn package # build the experimental framework using maven
+cp target/admap-1.0-SNAPSHOT-jar-with-dependencies.jar ../solver.jar # copy the binaries
 cd ..
 
 echo "----------------------------------------------------------"
-echo " Compilation finished! Will run the experiment now."
+echo " Compilation finished! "
 echo "-----------------------------------------------------------"    
 
 # run the experiment for each environment
