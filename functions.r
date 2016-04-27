@@ -333,6 +333,15 @@ make.grid.plot <- function(env, plotsdir, min.instances.for.summary) {
   prolong <-
     prolong.vs.nagents(common.runs(runs, .("PP","RPP","ADPP","ADRPP", "SDPP", "SDRPP", "BASEST")), min.instances.for.summary, maxagents)
   
+  
+  ggsave(filename=paste(plotsdir, env,"-success.pdf", sep=""), plot=success, width=8, height=5)
+  ggsave(filename=paste(plotsdir, env,"-runtime.pdf", sep=""), plot=runtime, width=8, height=5)
+  ggsave(filename=paste(plotsdir, env,"-speedup.pdf", sep=""), plot=speedup, width=8, height=5)
+  ggsave(filename=paste(plotsdir, env,"-replans.pdf", sep=""), plot=replans, width=8, height=5)
+  ggsave(filename=paste(plotsdir, env,"-prolong.pdf", sep=""), plot=prolong, width=8, height=5)
+  
+  # create a table of individual plots...
+  
   g_legend<-function(p){
     tmp <- ggplotGrob(p)
     leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
@@ -351,6 +360,8 @@ make.grid.plot <- function(env, plotsdir, min.instances.for.summary) {
     replans + theme(legend.position="none"),     
     ncol=1)
   
+  # some versions of ggplot2 and gridExtra are incompatible, causing the following line to fail
   ggsave(filename=paste(plotsdir, env,".pdf", sep=""), plot=grid.plots, width=5, height=18)
+  
   grid.plots
 }
