@@ -7,19 +7,14 @@ The dependencies are managed using Maven. To compile the project and create a ja
 
 $ mvn package
 
-The jar archive with all dependencies will be in:
+After successful compilation, new jar archive including compiled source code and all dependencies will be generated:
 
 target/admap-1.0-SNAPSHOT-jar-with-dependencies.jar
-
-To update the implementation of algorithms used in the experiment, replace solver.jar with the newly build jar package:
-
-cp target/admap-1.0-SNAPSHOT-jar-with-dependencies.jar ../solver.jar
 
 Alternatively, you can open the project in your favorite IDE, i.e. in Eclipse.
 
 Getting started
 ---------------
-
 The planners are run through cz.agents.admap.creator.ScenarioCreator class. 
 
 Parameters:
@@ -33,14 +28,12 @@ Detailed information can be derived from the source code, in particular from the
 
 Example: 
 --------
+The following command (executed in root of this repository) will run the ADRPP on the example problem instance described in file instances/ubremen-r27-docks/249.xml.
 
-	The following command will run the ADRPP on the example problem instance described in file instances/ubremen-r27-docks/249.xml.
-
-	$ java -jar admap-solver/target/admap-1.0-SNAPSHOT-jar-with-dependencies.jar cz.agents.admap.creator.ScenarioCreator -problemfile instances/ubremen-r27-docks/249.xml -method ADRPP -maxtime 15000 -timestep 27 -showvis
+$ java -jar admap-solver/target/admap-1.0-SNAPSHOT-jar-with-dependencies.jar cz.agents.admap.creator.ScenarioCreator -problemfile instances/ubremen-r27-docks/249.xml -method ADRPP -maxtime 15000 -timestep 27 -showvis
 
 Visualization control:  
 ----------------------
-
 When the visualization window pops-up, use the following keys to toggle various useful visualization layers:
   m - missions/tasks of agents
   t - trajectories of agents
