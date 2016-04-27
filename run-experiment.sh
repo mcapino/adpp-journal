@@ -4,7 +4,7 @@
 CPUS=4
 
 # how many instances will be generated for each data point (i.e. for each number of robots in each instanceset)
-N=2
+N=50
 
 # list of environments
 ENVS="empty-hall-r22 empty-hall-r22-docks ubremen-r27 ubremen-r27-docks warehouse-r25 warehouse-r25-docks"
