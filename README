@@ -14,7 +14,7 @@ The following software must be installed on the machine where the experiment is 
  * Java JDK 7 or higher
  * Maven
  * GNU parallel
- * R programming language with packages: plyr, ggplot2 rcolorbrewer, gridExtra
+ * R programming language with packages: plyr, ggplot2, rcolorbrewer, gridExtra
 
 In Ubuntu 14.04, all the dependencies can be installed by running
 
@@ -24,6 +24,9 @@ $ sudo Rscript -e "install.packages('gridExtra', repos='http://cran.us.r-project
 Then, the entire experiment can be recomputed by running the run-experiment script:
 
 $ ./run-experiment.sh 
+
+When the script finishes (which may take many hours), the plots summarizing the results of the experiment 
+will be generated in /plots directory. 
 
 
 Inspect the source code
