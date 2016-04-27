@@ -8,13 +8,22 @@ M. Čáp, P. Novák, A. Kleiner, and M. Selecký, “Prioritized planning algori
 Further, it contains the dataset and script neccessary to reproduce the experimental results reported in the article.
 
 Running the experiments
-----------------------
-The entire experiment can be recomputed by executing run-experiment.sh script.
+-----------------------
 
-The script requires that the following software is installed on the machine where it is executed: 
- * jdk8
- * gnu parallel
- * R programming language.
+The following software must be installed on the machine where the experiment is executed: 
+ * Java JDK 7 or higher
+ * Maven
+ * GNU parallel
+ * R programming language with packages: plyr, ggplot2 rcolorbrewer, gridExtra
+
+In Ubuntu 14.04, all the dependencies can be installed by running
+
+$ sudo apt-get install -y openjdk-7-jdk maven parallel r-base r-cran-plyr r-cran-ggplot2 r-cran-rcolorbrewer
+$ sudo Rscript -e "install.packages('gridExtra', repos='http://cran.us.r-project.org')"
+
+Then, the entire experiment can be recomputed by running the run-experiment script:
+
+$ ./run-experiment.sh 
 
 
 Inspect the source code
