@@ -25,8 +25,7 @@ Then, the entire experiment can be recomputed by running the run-experiment scri
 
 $ ./run-experiment.sh 
 
-When the script finishes (which may take many hours), the plots summarizing the results of the experiment 
-will be generated in /plots directory. 
+When the script finishes (which may take many hours), the plots summarizing the results of the experiment will be generated in /plots directory. 
 
 
 Inspect the source code
