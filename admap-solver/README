@@ -28,7 +28,20 @@ Detailed information can be derived from the source code, in particular from the
 
 Example: 
 --------
-The following command (executed in root of this repository) will run the ADRPP on the example problem instance described in file instances/ubremen-r27-docks/249.xml.
+To see any of the algorithms in action, run the following sequence of command in the root of the repository:
+
+1) Compile the source code and create a jar archive with all the dependencies:
+
+$ cd admap-solver
+$ mvn package
+$ cd ..
+
+2) Generate problem instances. Each instance describes the environment in which the robots operate and the required start and destination of each robot. 
+The following command will generate a set of problem instances in ubremen (i.e. office) environment with different number of robots. The first parameter specifies the number of random instances to generate for each number of robots. The suffix "-docks" means that the starts and destinations of robots will be endpoints of a well-formed infrastructure created in the environment. 
+
+$ instanceset-generators/ubremen-r27-docks.sh 50
+  
+3) Run the ADRPP on the problem instance described in file instances/ubremen-r27-docks/249.xml and visualize the result:
 
 $ java -jar admap-solver/target/admap-1.0-SNAPSHOT-jar-with-dependencies.jar cz.agents.admap.creator.ScenarioCreator -problemfile instances/ubremen-r27-docks/249.xml -method ADRPP -maxtime 15000 -timestep 27 -showvis
 
