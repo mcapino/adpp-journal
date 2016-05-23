@@ -11,7 +11,7 @@ After successful compilation, new jar archive including compiled source code and
 
 target/admap-1.0-SNAPSHOT-jar-with-dependencies.jar
 
-Alternatively, you can open the project in your favorite IDE, i.e. in Eclipse.
+Alternatively, you can open the project in your favorite IDE, e.g. in Eclipse.
 
 Getting started
 ---------------
@@ -36,7 +36,9 @@ $ cd admap-solver
 $ mvn package
 $ cd ..
 
-2) Generate problem instances. Each instance describes the environment in which the robots operate and the required start and destination of each robot. 
+2) Generate problem instances. 
+
+Each instance describes the environment in which the robots operate and the required start and destination of each robot. 
 The following command will generate a set of problem instances in ubremen (i.e. office) environment with different number of robots. The first parameter specifies the number of random instances to generate for each number of robots. The suffix "-docks" means that the starts and destinations of robots will be endpoints of a well-formed infrastructure created in the environment. 
 
 $ instanceset-generators/ubremen-r27-docks.sh 50
@@ -60,7 +62,5 @@ The movement of agents can be simulated by pressing (and holding) the following 
   <space> - reset time to 0
   
 Dragging with right mouse button pressed moves the viewport. Mouse wheel zooms the view.
-  
-  
   
 
